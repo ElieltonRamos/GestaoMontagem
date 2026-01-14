@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "gestaomontagem",
+        "title": "Gestor de Montagem",
         "width": 800,
         "height": 600
       }

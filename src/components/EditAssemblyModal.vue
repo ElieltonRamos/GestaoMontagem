@@ -9,7 +9,7 @@
         <div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full my-8">
           <!-- Header -->
           <div class="flex items-center justify-between p-6 border-b border-gray-700">
-            <h3 class="text-xl font-bold text-white">Edit Assembly</h3>
+            <h3 class="text-xl font-bold text-white">Editar Montagem</h3>
             <button
               @click="closeModal"
               class="text-gray-400 hover:text-white transition-colors"
@@ -25,7 +25,7 @@
             <!-- Order Number -->
             <div>
               <label for="edit-orderNumber" class="block text-sm font-medium text-gray-300 mb-2">
-                Order Number <span class="text-red-400">*</span>
+                Nº do Pedido <span class="text-red-400">*</span>
               </label>
               <input
                 id="edit-orderNumber"
@@ -40,7 +40,7 @@
             <!-- Date -->
             <div>
               <label for="edit-date" class="block text-sm font-medium text-gray-300 mb-2">
-                Date <span class="text-red-400">*</span>
+                Data <span class="text-red-400">*</span>
               </label>
               <input
                 id="edit-date"
@@ -53,7 +53,7 @@
             <!-- Assembler -->
             <div>
               <label for="edit-assembler" class="block text-sm font-medium text-gray-300 mb-2">
-                Assembler <span class="text-red-400">*</span>
+                Montador <span class="text-red-400">*</span>
               </label>
               <select
                 id="edit-assembler"
@@ -73,7 +73,7 @@
             <!-- Furniture Description -->
             <div>
               <label for="edit-furnitureDescription" class="block text-sm font-medium text-gray-300 mb-2">
-                Furniture Description <span class="text-red-400">*</span>
+                Descrição do Móvel <span class="text-red-400">*</span>
               </label>
               <textarea
                 id="edit-furnitureDescription"
@@ -86,10 +86,10 @@
             <!-- Order Value -->
             <div>
               <label for="edit-orderValue" class="block text-sm font-medium text-gray-300 mb-2">
-                Order Value <span class="text-red-400">*</span>
+                Valor do Pedido <span class="text-red-400">*</span>
               </label>
               <div class="relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">R$</span>
                 <input
                   id="edit-orderValue"
                   v-model.number="form.orderValue"
@@ -104,7 +104,7 @@
             <!-- Percentage Paid -->
             <div>
               <label for="edit-percentagePaid" class="block text-sm font-medium text-gray-300 mb-2">
-                Percentage Paid <span class="text-red-400">*</span>
+                % Pago <span class="text-red-400">*</span>
               </label>
               <div class="relative">
                 <input
@@ -121,9 +121,9 @@
 
             <!-- Amount Paid -->
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Amount Paid</label>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Valor Pago</label>
               <div class="relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">R$</span>
                 <input
                   :value="amountPaid.toFixed(2)"
                   type="text"
@@ -140,14 +140,14 @@
                 @click="closeModal"
                 class="px-4 py-2 text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
                 class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+                {{ isSubmitting ? 'Salvando...' : 'Salvar Alterações' }}
               </button>
             </div>
           </form>
@@ -213,12 +213,12 @@ const validateForm = (): boolean => {
   errors.orderNumber = ''
   
   if (!form.orderNumber.trim()) {
-    errors.orderNumber = 'Order number is required'
+    errors.orderNumber = 'O número do pedido é obrigatório'
     return false
   }
   
   if (props.assembly && assembliesService.existsByOrderNumberExceptId(form.orderNumber, props.assembly.id)) {
-    errors.orderNumber = 'An assembly with this order number already exists'
+    errors.orderNumber = 'Já existe uma montagem com este número de pedido'
     return false
   }
   

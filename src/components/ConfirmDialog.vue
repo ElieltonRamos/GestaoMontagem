@@ -49,8 +49,8 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  title: 'Confirm Action',
-  message: 'Are you sure you want to proceed?'
+  title: 'Confirmar Acão',
+  message: 'Tem certeza de que deseja prosseguir?'
 })
 
 const emit = defineEmits<{

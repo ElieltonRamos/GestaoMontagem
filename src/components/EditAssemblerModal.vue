@@ -9,7 +9,7 @@
         <div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <!-- Header -->
           <div class="flex items-center justify-between p-6 border-b border-gray-700">
-            <h3 class="text-xl font-bold text-white">Edit Assembler</h3>
+            <h3 class="text-xl font-bold text-white">Editar Montador</h3>
             <button
               @click="closeModal"
               class="text-gray-400 hover:text-white transition-colors"
@@ -25,7 +25,7 @@
             <!-- Name Field -->
             <div>
               <label for="edit-name" class="block text-sm font-medium text-gray-300 mb-2">
-                Name <span class="text-red-400">*</span>
+                Nome <span class="text-red-400">*</span>
               </label>
               <input
                 id="edit-name"
@@ -33,7 +33,7 @@
                 type="text"
                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :class="{ 'border-red-500': errors.name }"
-                placeholder="Enter assembler name"
+                placeholder="Digite o nome do montador"
               />
               <p v-if="errors.name" class="mt-1 text-sm text-red-400">{{ errors.name }}</p>
             </div>
@@ -41,7 +41,7 @@
             <!-- Phone Field -->
             <div>
               <label for="edit-phone" class="block text-sm font-medium text-gray-300 mb-2">
-                Phone <span class="text-red-400">*</span>
+                Telefone <span class="text-red-400">*</span>
               </label>
               <input
                 id="edit-phone"
@@ -59,7 +59,7 @@
             <!-- CPF Field -->
             <div>
               <label for="edit-cpf" class="block text-sm font-medium text-gray-300 mb-2">
-                CPF <span class="text-gray-500 text-xs">(Optional)</span>
+                CPF <span class="text-gray-500 text-xs">(Opcional)</span>
               </label>
               <input
                 id="edit-cpf"
@@ -75,14 +75,14 @@
             <!-- Address Field -->
             <div>
               <label for="edit-address" class="block text-sm font-medium text-gray-300 mb-2">
-                Address <span class="text-gray-500 text-xs">(Optional)</span>
+                Endereço <span class="text-gray-500 text-xs">(Opcional)</span>
               </label>
               <textarea
                 id="edit-address"
                 v-model="form.address"
                 rows="3"
                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                placeholder="Enter address"
+                placeholder="Digite o endereço"
               ></textarea>
             </div>
 
@@ -93,14 +93,14 @@
                 @click="closeModal"
                 class="px-4 py-2 text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
                 class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+                {{ isSubmitting ? 'Salvando...' : 'Salvar Alterações' }}
               </button>
             </div>
           </form>
@@ -193,19 +193,19 @@ const validateForm = (): boolean => {
   errors.phone = ''
   
   if (!form.name.trim()) {
-    errors.name = 'Name is required'
+    errors.name = 'O nome é obrigatório'
     isValid = false
   } else if (props.assembler && assemblersService.existsByNameExceptId(form.name, props.assembler.id)) {
-    errors.name = 'An assembler with this name already exists'
+    errors.name = 'Já existe um montador com este nome'
     isValid = false
   }
   
   const phoneDigits = form.phone.replace(/\D/g, '')
   if (!form.phone.trim()) {
-    errors.phone = 'Phone is required'
+    errors.phone = 'O telefone é obrigatório'
     isValid = false
   } else if (phoneDigits.length < 10) {
-    errors.phone = 'Phone must have at least 10 digits'
+    errors.phone = 'O telefone deve ter pelo menos 10 dígitos'
     isValid = false
   }
   

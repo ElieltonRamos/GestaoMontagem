@@ -331,7 +331,7 @@ const closeEditModal = () => {
 
 const handleSaved = () => {
   loadData()
-  toast.message = 'Assembly updated successfully!'
+  toast.message = 'Montagem atualizada com sucesso!'
   toast.type = 'success'
 }
 
@@ -349,7 +349,7 @@ const handleDelete = () => {
   if (selectedAssembly.value) {
     assembliesService.delete(selectedAssembly.value.id)
     loadData()
-    toast.message = 'Assembly deleted successfully!'
+    toast.message = 'Montagem excluída com sucesso!'
     toast.type = 'success'
   }
   closeDeleteConfirm()
