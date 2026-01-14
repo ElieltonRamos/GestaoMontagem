@@ -1,14 +1,12 @@
 <template>
   <div>
-    <!-- Dashboard Stats -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-      <!-- Card 1: Total Montagens -->
+      <!-- Card 1: Total Assemblies -->
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-400 uppercase tracking-wide">Total Montagens</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ stats.totalMontagens }}</p>
-            <p class="text-xs text-green-400 mt-1">+12% este mês</p>
+            <p class="text-sm text-gray-400 uppercase tracking-wide">Total Assemblies</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ stats.totalAssemblies }}</p>
           </div>
           <div class="p-3 bg-blue-500 bg-opacity-20 rounded-lg">
             <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,13 +16,12 @@
         </div>
       </div>
 
-      <!-- Card 2: Valor Total -->
+      <!-- Card 2: Total Value -->
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-green-500 transition-colors">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-400 uppercase tracking-wide">Valor Total</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ formatCurrency(stats.valorTotal) }}</p>
-            <p class="text-xs text-green-400 mt-1">+8% este mês</p>
+            <p class="text-sm text-gray-400 uppercase tracking-wide">Total Value</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ formatCurrency(stats.totalValue) }}</p>
           </div>
           <div class="p-3 bg-green-500 bg-opacity-20 rounded-lg">
             <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,13 +31,12 @@
         </div>
       </div>
 
-      <!-- Card 3: Montadores Ativos -->
+      <!-- Card 3: Active Assemblers -->
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-purple-500 transition-colors">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-400 uppercase tracking-wide">Montadores Ativos</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ stats.montadoresAtivos }}</p>
-            <p class="text-xs text-gray-400 mt-1">3 novos este mês</p>
+            <p class="text-sm text-gray-400 uppercase tracking-wide">Active Assemblers</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ stats.activeAssemblers }}</p>
           </div>
           <div class="p-3 bg-purple-500 bg-opacity-20 rounded-lg">
             <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,50 +46,31 @@
         </div>
       </div>
     </div>
-
-    <!-- Recent Activity -->
-    <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-      <h3 class="text-lg font-semibold text-white mb-4">Atividades Recentes</h3>
-      <div class="space-y-3">
-        <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors">
-          <div class="flex items-center space-x-3">
-            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
-            <p class="text-sm text-gray-300">Nova montagem registrada - Pedido #14388</p>
-          </div>
-          <span class="text-xs text-gray-500">Há 2 horas</span>
-        </div>
-        <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors">
-          <div class="flex items-center space-x-3">
-            <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-            <p class="text-sm text-gray-300">Montador cadastrado - IVANILDO</p>
-          </div>
-          <span class="text-xs text-gray-500">Há 5 horas</span>
-        </div>
-        <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors">
-          <div class="flex items-center space-x-3">
-            <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
-            <p class="text-sm text-gray-300">Montagem concluída - Pedido #14322</p>
-          </div>
-          <span class="text-xs text-gray-500">Ontem</span>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { storageService } from '../services/database.service'
 
 const stats = ref({
-  totalMontagens: 143,
-  valorTotal: 285670.50,
-  montadoresAtivos: 12
+  totalAssemblies: 0,
+  totalValue: 0,
+  activeAssemblers: 0
 })
 
+const loadStats = () => {
+  stats.value = storageService.getStats()
+}
+
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'USD'
   }).format(value)
 }
+
+onMounted(() => {
+  loadStats()
+})
 </script>

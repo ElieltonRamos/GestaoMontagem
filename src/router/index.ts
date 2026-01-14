@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import HomeLayout from '../layouts/HomeLayout.vue';
+import { createRouter, createWebHistory } from 'vue-router'
+import HomeLayout from '../layouts/HomeLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,26 +11,26 @@ const router = createRouter({
         {
           path: '',
           name: 'dashboard',
-          component: () => import('@/views/Dashboard.vue'),
+          component: () => import('@/views/Dashboard.vue')
         },
         {
-          path: 'listagem',
-          name: 'listagem',
-          component: () => import('@/views/Listagem.vue'),
+          path: 'listing',
+          name: 'listing',
+          component: () => import('@/views/Listing.vue')
         },
         {
-          path: 'cadastrar-montador',
-          name: 'cadastrar-montador',
-          component: () => import('@/views/CadastrarMontador.vue')
+          path: 'register-assembler',
+          name: 'register-assembler',
+          component: () => import('@/views/RegisterAssembler.vue')
         },
         {
-          path: 'registrar-montagem',
-          name: 'registrar-montagem',
-          component: () => import('@/views/RegistrarMontagem.vue')
+          path: 'register-assembly',
+          name: 'register-assembly',
+          component: () => import('@/views/RegisterAssembly.vue')
         }
-      ],
-    },
-  ],
-});
+      ]
+    }
+  ]
+})
 
-export default router;
+export default router
