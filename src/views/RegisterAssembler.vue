@@ -1,13 +1,13 @@
 <template>
   <div>
-    <h2 class="text-2xl font-bold text-white mb-6">Register Assembler</h2>
+    <h2 class="text-2xl font-bold text-white mb-6">Cadastrar Montador</h2>
     
     <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <!-- Name Field -->
         <div>
           <label for="name" class="block text-sm font-medium text-gray-300 mb-2">
-            Name <span class="text-red-400">*</span>
+            Nome <span class="text-red-400">*</span>
           </label>
           <input
             id="name"
@@ -15,7 +15,7 @@
             type="text"
             class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             :class="{ 'border-red-500': errors.name }"
-            placeholder="Enter assembler name"
+            placeholder="Digite o nome do montador"
           />
           <p v-if="errors.name" class="mt-1 text-sm text-red-400">{{ errors.name }}</p>
         </div>
@@ -23,7 +23,7 @@
         <!-- Phone Field -->
         <div>
           <label for="phone" class="block text-sm font-medium text-gray-300 mb-2">
-            Phone <span class="text-red-400">*</span>
+            Telefone <span class="text-red-400">*</span>
           </label>
           <input
             id="phone"
@@ -41,7 +41,7 @@
         <!-- CPF Field (Optional) -->
         <div>
           <label for="cpf" class="block text-sm font-medium text-gray-300 mb-2">
-            CPF <span class="text-gray-500 text-xs">(Optional)</span>
+            CPF <span class="text-gray-500 text-xs">(Opcional)</span>
           </label>
           <input
             id="cpf"
@@ -57,14 +57,14 @@
         <!-- Address Field (Optional) -->
         <div>
           <label for="address" class="block text-sm font-medium text-gray-300 mb-2">
-            Address <span class="text-gray-500 text-xs">(Optional)</span>
+            Endereço <span class="text-gray-500 text-xs">(Opcional)</span>
           </label>
           <textarea
             id="address"
             v-model="form.address"
             rows="3"
             class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            placeholder="Enter address"
+            placeholder="Digite o endereço"
           ></textarea>
         </div>
 
@@ -75,7 +75,7 @@
             :disabled="isSubmitting"
             class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ isSubmitting ? 'Saving...' : 'Save Assembler' }}
+            {{ isSubmitting ? 'Salvando...' : 'Salvar Montador' }}
           </button>
         </div>
       </form>
@@ -139,26 +139,23 @@ const formatCPF = (event: Event) => {
 const validateForm = (): boolean => {
   let isValid = true
   
-  // Reset errors
   errors.name = ''
   errors.phone = ''
   
-  // Validate name
   if (!form.name.trim()) {
-    errors.name = 'Name is required'
+    errors.name = 'Nome é obrigatório'
     isValid = false
   } else if (assemblersService.existsByName(form.name)) {
-    errors.name = 'An assembler with this name already exists'
+    errors.name = 'Já existe um montador com este nome'
     isValid = false
   }
   
-  // Validate phone
   const phoneDigits = form.phone.replace(/\D/g, '')
   if (!form.phone.trim()) {
-    errors.phone = 'Phone is required'
+    errors.phone = 'Telefone é obrigatório'
     isValid = false
   } else if (phoneDigits.length < 10) {
-    errors.phone = 'Phone must have at least 10 digits'
+    errors.phone = 'O telefone deve ter pelo menos 10 dígitos'
     isValid = false
   }
   
@@ -173,7 +170,6 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Clean phone and CPF (remove formatting)
     const cleanPhone = form.phone.replace(/\D/g, '')
     const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
     
@@ -184,18 +180,16 @@ const handleSubmit = async () => {
       form.address.trim() || undefined
     )
     
-    // Show success toast
-    toast.message = 'Assembler registered successfully!'
+    toast.message = 'Montador cadastrado com sucesso!'
     toast.type = 'success'
     
-    // Reset form
     form.name = ''
     form.phone = ''
     form.cpf = ''
     form.address = ''
     
   } catch (error) {
-    toast.message = 'Error registering assembler'
+    toast.message = 'Erro ao cadastrar montador'
     toast.type = 'error'
   } finally {
     isSubmitting.value = false

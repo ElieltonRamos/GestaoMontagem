@@ -9,57 +9,57 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
       </button>
-      <h2 class="text-2xl font-bold text-white">Assembly Details</h2>
+      <h2 class="text-2xl font-bold text-white">Detalhes da Montagem</h2>
     </div>
 
     <div v-if="assembly" class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Order Number</label>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Número da venda</label>
           <p class="text-lg text-white">{{ assembly.orderNumber }}</p>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Assembler</label>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Montador</label>
           <p class="text-lg text-white">{{ assembly.assemblerName }}</p>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Date</label>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Data</label>
           <p class="text-lg text-white">{{ formatDate(assembly.date) }}</p>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-400 mb-1">Furniture Description</label>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Descrição do móvel</label>
           <p class="text-lg text-white whitespace-pre-wrap">{{ assembly.furnitureDescription }}</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4 pt-4">
           <div>
-            <label class="block text-sm font-medium text-gray-400 mb-1">Order Value</label>
+            <label class="block text-sm font-medium text-gray-400 mb-1">Valor do pedido</label>
             <p class="text-lg text-white">{{ formatCurrency(assembly.orderValue) }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-400 mb-1">Percentage Paid</label>
+            <label class="block text-sm font-medium text-gray-400 mb-1">Percentual pago</label>
             <p class="text-lg text-white">{{ assembly.percentagePaid }}%</p>
           </div>
         </div>
 
         <div class="border-t border-gray-700 pt-4">
-          <label class="block text-sm font-medium text-gray-400 mb-1">Amount Paid</label>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Valor pago</label>
           <p class="text-2xl font-bold text-green-400">{{ formatCurrency(assembly.amountPaid) }}</p>
         </div>
 
         <div class="border-t border-gray-700 pt-4">
-          <label class="block text-sm font-medium text-gray-400 mb-1">Registered At</label>
+          <label class="block text-sm font-medium text-gray-400 mb-1">Cadastrado em</label>
           <p class="text-sm text-gray-400">{{ formatDateTime(assembly.createdAt) }}</p>
         </div>
       </div>
     </div>
 
     <div v-else class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-      <p class="text-gray-400">Assembly not found</p>
+      <p class="text-gray-400">Montagem não encontrada</p>
     </div>
   </div>
 </template>
@@ -75,14 +75,14 @@ const route = useRoute()
 const assembly = ref<Assembly | null>(null)
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('pt-br', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'BRL'
   }).format(value)
 }
 
 const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString('pt-br', {
     day: '2-digit',
     month: 'long',
     year: 'numeric'
@@ -90,7 +90,7 @@ const formatDate = (dateString: string): string => {
 }
 
 const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString('pt-br', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
