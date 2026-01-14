@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import Toast from '@/components/Toast.vue'
-import { storageService } from '../services/database.service'
+import { assemblersService } from '../services'
 
 const form = reactive({
   name: '',
@@ -147,7 +147,7 @@ const validateForm = (): boolean => {
   if (!form.name.trim()) {
     errors.name = 'Name is required'
     isValid = false
-  } else if (storageService.assemblerExists(form.name)) {
+  } else if (assemblersService.existsByName(form.name)) {
     errors.name = 'An assembler with this name already exists'
     isValid = false
   }
@@ -177,7 +177,7 @@ const handleSubmit = async () => {
     const cleanPhone = form.phone.replace(/\D/g, '')
     const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
     
-    storageService.saveAssembler(
+    assemblersService.create(
       form.name.trim(),
       cleanPhone,
       cleanCPF,

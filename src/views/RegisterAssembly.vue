@@ -157,8 +157,8 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted } from 'vue'
 import Toast from '@/components/Toast.vue'
-import { Assembler } from '../types'
-import { storageService } from '../services/database.service'
+import { Assembler, Assembly } from '../types'
+import { assemblersService, assembliesService } from '../services'
 
 const assemblers = ref<Assembler[]>([])
 
@@ -215,7 +215,7 @@ const validateForm = (): boolean => {
   if (!form.orderNumber.trim()) {
     errors.orderNumber = 'Order number is required'
     isValid = false
-  } else if (storageService.assemblyExists(form.orderNumber)) {
+  } else if (assembliesService.existsByOrderNumber(form.orderNumber)) {
     errors.orderNumber = 'An assembly with this order number already exists'
     isValid = false
   }
@@ -268,17 +268,21 @@ const handleSubmit = async () => {
       toast.type = 'error'
       return
     }
-    
-    storageService.saveAssembly(
-      form.assemblerId,
-      selectedAssembler.name,
-      form.orderNumber.trim(),
-      form.orderValue,
-      form.percentagePaid,
-      amountPaid.value,
-      form.furnitureDescription.trim(),
-      form.date
-    )
+
+    const newAssembly: Assembly = {
+      id: '1',
+      amountPaid: amountPaid.value,
+      assemblerId: form.assemblerId,
+      assemblerName: selectedAssembler.name,
+      createdAt: form.date,
+      date: form.date,
+      furnitureDescription: form.furnitureDescription.trim(),
+      orderNumber: form.orderNumber.trim(),
+      orderValue: form.orderValue,
+      percentagePaid: form.percentagePaid,
+    }
+
+    assembliesService.create(newAssembly)
     
     // Show success toast
     toast.message = 'Assembly registered successfully!'
@@ -301,7 +305,7 @@ const handleSubmit = async () => {
 }
 
 const loadAssemblers = () => {
-  assemblers.value = storageService.getAssemblers()
+  assemblers.value = assemblersService.getAll()
 }
 
 onMounted(() => {

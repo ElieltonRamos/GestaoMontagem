@@ -160,7 +160,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch, computed, onMounted } from 'vue'
 import { Assembler, Assembly } from '../types';
-import { storageService } from '../services/database.service';
+import { assemblersService, assembliesService } from '../services';
 
 interface Props {
   isOpen: boolean
@@ -217,7 +217,7 @@ const validateForm = (): boolean => {
     return false
   }
   
-  if (props.assembly && storageService.assemblyExistsExcept(form.orderNumber, props.assembly.id)) {
+  if (props.assembly && assembliesService.existsByOrderNumberExceptId(form.orderNumber, props.assembly.id)) {
     errors.orderNumber = 'An assembly with this order number already exists'
     return false
   }
@@ -234,18 +234,21 @@ const handleSubmit = () => {
     const selectedAssembler = assemblers.value.find(a => a.id === form.assemblerId)
     
     if (!selectedAssembler) return
+
+    const updatedAssembly: Assembly = {
+      id: props.assembly.id,
+      assemblerId: form.assemblerId,
+      assemblerName: selectedAssembler.name,
+      orderNumber: form.orderNumber.trim(),
+      orderValue: form.orderValue,
+      percentagePaid: form.percentagePaid,
+      amountPaid: amountPaid.value,
+      furnitureDescription: form.furnitureDescription.trim(),
+      date: form.date,
+      createdAt: form.date
+    }
     
-    storageService.updateAssembly(
-      props.assembly.id,
-      form.assemblerId,
-      selectedAssembler.name,
-      form.orderNumber.trim(),
-      form.orderValue,
-      form.percentagePaid,
-      amountPaid.value,
-      form.furnitureDescription.trim(),
-      form.date
-    )
+    assembliesService.update(props.assembly.id, updatedAssembly)
     
     emit('saved')
     closeModal()
@@ -260,7 +263,7 @@ const closeModal = () => {
 }
 
 onMounted(() => {
-  assemblers.value = storageService.getAssemblers()
+  assemblers.value = assemblersService.getAll()
 })
 </script>
 

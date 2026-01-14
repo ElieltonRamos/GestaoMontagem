@@ -19,6 +19,7 @@ export interface Assembly {
   date: string;
   createdAt: string;
 }
+
 export interface DashboardStats {
   totalAssemblies: number;
   totalValue: number;

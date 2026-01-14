@@ -105,11 +105,11 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { storageService } from '../services/database.service'
 import EditAssemblerModal from '@/components/EditAssemblerModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import Toast from '@/components/Toast.vue'
 import { Assembler } from '../types'
+import { assemblersService } from '../services'
 
 const router = useRouter()
 const assemblers = ref<Assembler[]>([])
@@ -123,7 +123,7 @@ const toast = reactive({
 })
 
 const loadAssemblers = () => {
-  assemblers.value = storageService.getAssemblers()
+  assemblers.value = assemblersService.getAll()
 }
 
 const formatPhone = (phone: string): string => {
@@ -163,7 +163,7 @@ const closeDeleteConfirm = () => {
 
 const handleDelete = () => {
   if (selectedAssembler.value) {
-    storageService.deleteAssembler(selectedAssembler.value.id)
+    assemblersService.delete(selectedAssembler.value.id)
     loadAssemblers()
     toast.message = 'Assembler deleted successfully!'
     toast.type = 'success'

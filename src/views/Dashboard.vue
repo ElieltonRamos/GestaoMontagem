@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { storageService } from '../services/database.service'
+import { statsService } from '../services'
 
 const stats = ref({
   totalAssemblies: 0,
@@ -60,7 +60,7 @@ const stats = ref({
 })
 
 const loadStats = () => {
-  stats.value = storageService.getStats()
+  stats.value = statsService.getStats()
 }
 
 const formatCurrency = (value: number) => {

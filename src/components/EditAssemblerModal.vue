@@ -112,7 +112,8 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { storageService, type Assembler } from '../services/database.service'
+import { Assembler } from '../types';
+import { assemblersService } from '../services';
 
 interface Props {
   isOpen: boolean
@@ -194,7 +195,7 @@ const validateForm = (): boolean => {
   if (!form.name.trim()) {
     errors.name = 'Name is required'
     isValid = false
-  } else if (props.assembler && storageService.assemblerExistsExcept(form.name, props.assembler.id)) {
+  } else if (props.assembler && assemblersService.existsByNameExceptId(form.name, props.assembler.id)) {
     errors.name = 'An assembler with this name already exists'
     isValid = false
   }
@@ -220,7 +221,7 @@ const handleSubmit = () => {
     const cleanPhone = form.phone.replace(/\D/g, '')
     const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
     
-    storageService.updateAssembler(
+    assemblersService.update(
       props.assembler.id,
       form.name.trim(),
       cleanPhone,

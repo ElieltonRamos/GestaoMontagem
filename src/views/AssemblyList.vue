@@ -219,8 +219,8 @@ import { useRouter } from 'vue-router'
 import EditAssemblyModal from '@/components/EditAssemblyModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import Toast from '@/components/Toast.vue'
-import { storageService } from '../services/database.service'
 import { Assembler, Assembly } from '../types'
+import { assemblersService, assembliesService } from '../services'
 
 const router = useRouter()
 const assemblies = ref<Assembly[]>([])
@@ -289,8 +289,8 @@ const totalAmountPaid = computed(() => {
 })
 
 const loadData = () => {
-  assemblies.value = storageService.getAssemblies()
-  assemblers.value = storageService.getAssemblers()
+  assemblies.value = assembliesService.getAll()
+  assemblers.value = assemblersService.getAll()
 }
 
 const formatCurrency = (value: number): string => {
@@ -346,7 +346,7 @@ const closeDeleteConfirm = () => {
 
 const handleDelete = () => {
   if (selectedAssembly.value) {
-    storageService.deleteAssembly(selectedAssembly.value.id)
+    assembliesService.delete(selectedAssembly.value.id)
     loadData()
     toast.message = 'Assembly deleted successfully!'
     toast.type = 'success'

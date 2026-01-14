@@ -68,7 +68,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Assembly } from '../types'
-import { storageService } from '../services/database.service'
+import { assembliesService } from '../services'
 
 const router = useRouter()
 const route = useRoute()
@@ -105,6 +105,6 @@ const goBack = () => {
 
 onMounted(() => {
   const id = route.params.id as string
-  assembly.value = storageService.getAssemblyById(id)
+  assembly.value = assembliesService.getById(id)
 })
 </script>
