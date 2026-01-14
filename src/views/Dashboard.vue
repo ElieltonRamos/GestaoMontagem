@@ -1,12 +1,12 @@
 <template>
-  <div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-      <!-- Card 1: Total Assemblies -->
+  <div class="space-y-6">
+    <!-- Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-400 uppercase tracking-wide">Total Assemblies</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ stats.totalAssemblies }}</p>
+            <p class="text-sm text-gray-400 uppercase tracking-wide">Total de montagens</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ periodStats.totalAssemblies }}</p>
           </div>
           <div class="p-3 bg-blue-500 bg-opacity-20 rounded-lg">
             <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,12 +16,11 @@
         </div>
       </div>
 
-      <!-- Card 2: Total Value -->
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-green-500 transition-colors">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-400 uppercase tracking-wide">Total Value</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ formatCurrency(stats.totalValue) }}</p>
+            <p class="text-sm text-gray-400 uppercase tracking-wide">Total pago</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ formatBRL(periodStats.totalPaid) }}</p>
           </div>
           <div class="p-3 bg-green-500 bg-opacity-20 rounded-lg">
             <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,46 +30,371 @@
         </div>
       </div>
 
-      <!-- Card 3: Active Assemblers -->
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-purple-500 transition-colors">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-400 uppercase tracking-wide">Active Assemblers</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ stats.activeAssemblers }}</p>
+            <p class="text-sm text-gray-400 uppercase tracking-wide">Montadores cadastrados</p>
+            <p class="text-3xl font-bold text-white mt-2">{{ periodStats.totalAssemblers }}</p>
           </div>
           <div class="p-3 bg-purple-500 bg-opacity-20 rounded-lg">
             <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Filtro compacto (1 linha) -->
+    <div class="bg-gray-800 rounded-lg shadow-lg px-4 py-3 border border-gray-700">
+      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Data inicial</label>
+            <input
+              v-model="filters.startDate"
+              type="date"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Data final</label>
+            <input
+              v-model="filters.endDate"
+              type="date"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <button
+          @click="resetToCurrentMonth"
+          class="px-4 py-2 text-sm text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors md:ml-3 whitespace-nowrap"
+        >
+          Mês atual
+        </button>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold text-white mb-4">Total pago por montador (Top 10)</h3>
+        <canvas ref="paidByAssemblerCanvas"></canvas>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold text-white mb-4">Quantidade de montagens por montador (Top 10)</h3>
+        <canvas ref="countByAssemblerCanvas"></canvas>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold text-white mb-4">Total pago por dia</h3>
+        <canvas ref="paidByDayCanvas"></canvas>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+        <h3 class="text-lg font-semibold text-white mb-4">Quantidade de montagens por dia</h3>
+        <canvas ref="countByDayCanvas"></canvas>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { statsService } from '../services'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import Chart from 'chart.js/auto'
+import type { Assembly, Assembler } from '../types'
+import { assembliesService, assemblersService } from '../services'
 
-const stats = ref({
-  totalAssemblies: 0,
-  totalValue: 0,
-  activeAssemblers: 0
+const TOP_N = 10
+
+const filters = reactive({
+  startDate: '',
+  endDate: '',
 })
 
-const loadStats = () => {
-  stats.value = statsService.getStats()
-}
+const allAssemblies = ref<Assembly[]>([])
+const allAssemblers = ref<Assembler[]>([])
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-US', {
+function formatBRL(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
 }
 
+function parseYyyyMmDdToLocalDate(dateString: string): Date {
+  // evita parse YYYY-MM-DD como UTC (dependendo do runtime)
+  const [y, m, d] = dateString.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+function formatDateLabelPtBr(dateString: string): string {
+  const d = parseYyyyMmDdToLocalDate(dateString)
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
+function toYyyyMmDd(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+function resetToCurrentMonth(): void {
+  const now = new Date()
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  filters.startDate = toYyyyMmDd(firstDay)
+  filters.endDate = toYyyyMmDd(lastDay)
+}
+
+const filteredAssemblies = computed(() => {
+  let result = allAssemblies.value
+
+  if (filters.startDate) {
+    const start = parseYyyyMmDdToLocalDate(filters.startDate)
+    result = result.filter(a => parseYyyyMmDdToLocalDate(a.date) >= start)
+  }
+
+  if (filters.endDate) {
+    const end = parseYyyyMmDdToLocalDate(filters.endDate)
+    end.setHours(23, 59, 59, 999) // inclusivo
+    result = result.filter(a => parseYyyyMmDdToLocalDate(a.date) <= end)
+  }
+
+  return result
+})
+
+const periodStats = computed(() => {
+  const totalAssemblies = filteredAssemblies.value.length
+  const totalPaid = filteredAssemblies.value.reduce((sum, a) => sum + a.amountPaid, 0)
+  const totalAssemblers = allAssemblers.value.length // conforme você definiu
+
+  return { totalAssemblies, totalPaid, totalAssemblers }
+})
+
+const paidByAssemblerSeriesTop = computed(() => {
+  const totalPaidMap = new Map<string, number>()
+  for (const assembler of allAssemblers.value) totalPaidMap.set(assembler.id, 0)
+
+  for (const assembly of filteredAssemblies.value) {
+    totalPaidMap.set(
+      assembly.assemblerId,
+      (totalPaidMap.get(assembly.assemblerId) || 0) + assembly.amountPaid
+    )
+  }
+
+  const rows = allAssemblers.value.map(a => ({
+    assemblerId: a.id,
+    assemblerName: a.name,
+    totalPaid: totalPaidMap.get(a.id) || 0,
+  }))
+
+  return rows
+    .sort((a, b) => b.totalPaid - a.totalPaid)
+    .slice(0, TOP_N)
+})
+
+const countByAssemblerSeriesTop = computed(() => {
+  const countMap = new Map<string, number>()
+  for (const assembler of allAssemblers.value) countMap.set(assembler.id, 0)
+
+  for (const assembly of filteredAssemblies.value) {
+    countMap.set(assembly.assemblerId, (countMap.get(assembly.assemblerId) || 0) + 1)
+  }
+
+  const rows = allAssemblers.value.map(a => ({
+    assemblerId: a.id,
+    assemblerName: a.name,
+    totalCount: countMap.get(a.id) || 0,
+  }))
+
+  return rows
+    .sort((a, b) => b.totalCount - a.totalCount)
+    .slice(0, TOP_N)
+})
+
+function listDaysInclusive(startYmd: string, endYmd: string): string[] {
+  const start = parseYyyyMmDdToLocalDate(startYmd)
+  const end = parseYyyyMmDdToLocalDate(endYmd)
+  end.setHours(23, 59, 59, 999)
+
+  const days: string[] = []
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+
+  while (cursor.getTime() <= end.getTime()) {
+    days.push(toYyyyMmDd(cursor))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  return days
+}
+
+const dayAxis = computed(() => {
+  if (!filters.startDate || !filters.endDate) return []
+  return listDaysInclusive(filters.startDate, filters.endDate)
+})
+
+const paidByDaySeries = computed(() => {
+  const map = new Map<string, number>()
+  for (const day of dayAxis.value) map.set(day, 0)
+
+  for (const assembly of filteredAssemblies.value) {
+    map.set(assembly.date, (map.get(assembly.date) || 0) + assembly.amountPaid)
+  }
+
+  return dayAxis.value.map(day => ({
+    date: day,
+    totalPaid: map.get(day) || 0,
+  }))
+})
+
+const countByDaySeries = computed(() => {
+  const map = new Map<string, number>()
+  for (const day of dayAxis.value) map.set(day, 0)
+
+  for (const assembly of filteredAssemblies.value) {
+    map.set(assembly.date, (map.get(assembly.date) || 0) + 1)
+  }
+
+  return dayAxis.value.map(day => ({
+    date: day,
+    totalCount: map.get(day) || 0,
+  }))
+})
+
+const paidByAssemblerCanvas = ref<HTMLCanvasElement | null>(null)
+const countByAssemblerCanvas = ref<HTMLCanvasElement | null>(null)
+const paidByDayCanvas = ref<HTMLCanvasElement | null>(null)
+const countByDayCanvas = ref<HTMLCanvasElement | null>(null)
+
+let paidChart: Chart | null = null
+let countChart: Chart | null = null
+let paidByDayChart: Chart | null = null
+let countByDayChart: Chart | null = null
+
+async function renderCharts(): Promise<void> {
+  await nextTick()
+
+  if (paidChart) paidChart.destroy()
+  if (countChart) countChart.destroy()
+  if (paidByDayChart) paidByDayChart.destroy()
+  if (countByDayChart) countByDayChart.destroy()
+
+  const colors = {
+    blueBorder: 'rgb(59, 130, 246)',
+    blueBg: 'rgba(59, 130, 246, 0.35)',
+
+    purpleBorder: 'rgb(168, 85, 247)',
+    purpleBg: 'rgba(168, 85, 247, 0.35)',
+
+    greenBorder: 'rgb(34, 197, 94)',
+    greenBg: 'rgba(34, 197, 94, 0.20)',
+
+    orangeBorder: 'rgb(249, 115, 22)',
+    orangeBg: 'rgba(249, 115, 22, 0.35)',
+  }
+
+  if (paidByAssemblerCanvas.value) {
+    paidChart = new Chart(paidByAssemblerCanvas.value, {
+      type: 'bar',
+      data: {
+        labels: paidByAssemblerSeriesTop.value.map(x => x.assemblerName),
+        datasets: [
+          {
+            label: 'Total pago (R$)',
+            data: paidByAssemblerSeriesTop.value.map(x => x.totalPaid),
+            backgroundColor: colors.blueBg,
+            borderColor: colors.blueBorder,
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: true },
+    })
+  }
+
+  if (countByAssemblerCanvas.value) {
+    countChart = new Chart(countByAssemblerCanvas.value, {
+      type: 'bar',
+      data: {
+        labels: countByAssemblerSeriesTop.value.map(x => x.assemblerName),
+        datasets: [
+          {
+            label: 'Quantidade',
+            data: countByAssemblerSeriesTop.value.map(x => x.totalCount),
+            backgroundColor: colors.purpleBg,
+            borderColor: colors.purpleBorder,
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: true },
+    })
+  }
+
+  if (paidByDayCanvas.value) {
+    paidByDayChart = new Chart(paidByDayCanvas.value, {
+      type: 'line',
+      data: {
+        labels: paidByDaySeries.value.map(x => formatDateLabelPtBr(x.date)),
+        datasets: [
+          {
+            label: 'Total pago (R$)',
+            data: paidByDaySeries.value.map(x => x.totalPaid),
+            borderColor: colors.greenBorder,
+            backgroundColor: colors.greenBg,
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: colors.greenBorder,
+            pointBorderColor: colors.greenBorder,
+          },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: true },
+    })
+  }
+
+  if (countByDayCanvas.value) {
+    countByDayChart = new Chart(countByDayCanvas.value, {
+      type: 'bar',
+      data: {
+        labels: countByDaySeries.value.map(x => formatDateLabelPtBr(x.date)),
+        datasets: [
+          {
+            label: 'Quantidade',
+            data: countByDaySeries.value.map(x => x.totalCount),
+            backgroundColor: colors.orangeBg,
+            borderColor: colors.orangeBorder,
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: { responsive: true, maintainAspectRatio: true },
+    })
+  }
+}
+
+
 onMounted(() => {
-  loadStats()
+  resetToCurrentMonth()
+  allAssemblers.value = assemblersService.getAll()
+  allAssemblies.value = assembliesService.getAll()
+  renderCharts()
+})
+
+watch(
+  [paidByAssemblerSeriesTop, countByAssemblerSeriesTop, paidByDaySeries, countByDaySeries],
+  () => renderCharts()
+)
+
+onUnmounted(() => {
+  if (paidChart) paidChart.destroy()
+  if (countChart) countChart.destroy()
+  if (paidByDayChart) paidByDayChart.destroy()
+  if (countByDayChart) countByDayChart.destroy()
 })
 </script>
