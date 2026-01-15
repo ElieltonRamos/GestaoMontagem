@@ -27,15 +27,46 @@
               <label for="edit-name" class="block text-sm font-medium text-gray-300 mb-2">
                 Nome <span class="text-red-400">*</span>
               </label>
-              <input
-                id="edit-name"
-                v-model="form.name"
-                type="text"
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :class="{ 'border-red-500': errors.name }"
-                placeholder="Digite o nome do montador"
-              />
-              <p v-if="errors.name" class="mt-1 text-sm text-red-400">{{ errors.name }}</p>
+              <div class="relative">
+                <input
+                  id="edit-name"
+                  v-model="form.name"
+                  type="text"
+                  class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  :class="{ 'border-red-500': errors.name }"
+                  :disabled="isValidatingName || isSubmitting"
+                  placeholder="Digite o nome do montador"
+                />
+                <!-- Loading da validação de nome -->
+                <div
+                  v-if="isValidatingName"
+                  class="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <svg
+                    class="animate-spin h-5 w-5 text-blue-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+              <p v-if="errors.name" class="mt-1 text-sm text-red-400">
+                {{ errors.name }}
+              </p>
             </div>
 
             <!-- Phone Field -->
@@ -51,9 +82,12 @@
                 maxlength="15"
                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :class="{ 'border-red-500': errors.phone }"
+                :disabled="isSubmitting"
                 placeholder="(11) 98765-4321"
               />
-              <p v-if="errors.phone" class="mt-1 text-sm text-red-400">{{ errors.phone }}</p>
+              <p v-if="errors.phone" class="mt-1 text-sm text-red-400">
+                {{ errors.phone }}
+              </p>
             </div>
 
             <!-- CPF Field -->
@@ -68,6 +102,7 @@
                 @input="formatCPF"
                 maxlength="14"
                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :disabled="isSubmitting"
                 placeholder="000.000.000-00"
               />
             </div>
@@ -82,6 +117,7 @@
                 v-model="form.address"
                 rows="3"
                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                :disabled="isSubmitting"
                 placeholder="Digite o endereço"
               ></textarea>
             </div>
@@ -92,12 +128,13 @@
                 type="button"
                 @click="closeModal"
                 class="px-4 py-2 text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                :disabled="isSubmitting"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                :disabled="isSubmitting"
+                :disabled="isSubmitting || isValidatingName"
                 class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {{ isSubmitting ? 'Salvando...' : 'Salvar Alterações' }}
@@ -112,8 +149,8 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { Assembler } from '../types';
-import { assemblersService } from '../services';
+import { Assembler } from '../types'
+import { assemblersService } from '../services/assemblers.service.tauri'
 
 interface Props {
   isOpen: boolean
@@ -139,15 +176,26 @@ const errors = reactive({
 })
 
 const isSubmitting = ref(false)
+const isValidatingName = ref(false)
 
-watch(() => props.assembler, (newAssembler) => {
-  if (newAssembler) {
-    form.name = newAssembler.name
-    form.phone = formatPhoneDisplay(newAssembler.phone)
-    form.cpf = newAssembler.cpf ? formatCPFDisplay(newAssembler.cpf) : ''
-    form.address = newAssembler.address || ''
+watch(
+  () => props.assembler,
+  (newAssembler) => {
+    if (newAssembler) {
+      form.name = newAssembler.name
+      form.phone = formatPhoneDisplay(newAssembler.phone)
+      form.cpf = newAssembler.cpf ? formatCPFDisplay(newAssembler.cpf) : ''
+      form.address = newAssembler.address || ''
+    } else {
+      form.name = ''
+      form.phone = ''
+      form.cpf = ''
+      form.address = ''
+    }
+    errors.name = ''
+    errors.phone = ''
   }
-})
+)
 
 const formatPhoneDisplay = (phone: string): string => {
   const digits = phone.replace(/\D/g, '')
@@ -162,44 +210,61 @@ const formatCPFDisplay = (cpf: string): string => {
 const formatPhone = (event: Event) => {
   const input = event.target as HTMLInputElement
   let value = input.value.replace(/\D/g, '')
-  
+
   if (value.length <= 11) {
     value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
     value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3')
     value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
     value = value.replace(/^(\d*)/, '($1')
   }
-  
+
   form.phone = value
 }
 
 const formatCPF = (event: Event) => {
   const input = event.target as HTMLInputElement
   let value = input.value.replace(/\D/g, '')
-  
+
   if (value.length <= 11) {
     value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
     value = value.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3')
     value = value.replace(/(\d{3})(\d{3})/, '$1.$2')
   }
-  
+
   form.cpf = value
 }
 
-const validateForm = (): boolean => {
+const validateForm = async (): Promise<boolean> => {
   let isValid = true
-  
+
   errors.name = ''
   errors.phone = ''
-  
+
+  // Nome
   if (!form.name.trim()) {
     errors.name = 'O nome é obrigatório'
     isValid = false
-  } else if (props.assembler && assemblersService.existsByNameExceptId(form.name, props.assembler.id)) {
-    errors.name = 'Já existe um montador com este nome'
-    isValid = false
+  } else if (props.assembler) {
+    try {
+      isValidatingName.value = true
+      const nameExists = await assemblersService.existsByNameExceptId(
+        form.name.trim(),
+        props.assembler.id
+      )
+      if (nameExists) {
+        errors.name = 'Já existe um montador com este nome'
+        isValid = false
+      }
+    } catch (error) {
+      console.error('Erro ao validar nome:', error)
+      errors.name = 'Erro ao validar nome'
+      isValid = false
+    } finally {
+      isValidatingName.value = false
+    }
   }
-  
+
+  // Telefone
   const phoneDigits = form.phone.replace(/\D/g, '')
   if (!form.phone.trim()) {
     errors.phone = 'O telefone é obrigatório'
@@ -208,29 +273,38 @@ const validateForm = (): boolean => {
     errors.phone = 'O telefone deve ter pelo menos 10 dígitos'
     isValid = false
   }
-  
+
   return isValid
 }
 
-const handleSubmit = () => {
-  if (!validateForm() || !props.assembler) return
-  
+const handleSubmit = async () => {
+  if (!props.assembler) return
+
+  const ok = await validateForm()
+  if (!ok) return
+
   isSubmitting.value = true
-  
+
   try {
     const cleanPhone = form.phone.replace(/\D/g, '')
     const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
-    
-    assemblersService.update(
+
+    await assemblersService.update(
       props.assembler.id,
       form.name.trim(),
       cleanPhone,
       cleanCPF,
       form.address.trim() || undefined
     )
-    
+
     emit('saved')
     closeModal()
+  } catch (error) {
+    console.error('Erro ao salvar montador:', error)
+    // Aqui você pode adicionar um toast global, ou setar um erro genérico
+    if (!errors.name && !errors.phone) {
+      errors.name = 'Erro ao salvar montador'
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -239,6 +313,7 @@ const handleSubmit = () => {
 const closeModal = () => {
   errors.name = ''
   errors.phone = ''
+  isValidatingName.value = false
   emit('close')
 }
 </script>

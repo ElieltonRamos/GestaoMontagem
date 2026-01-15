@@ -81,7 +81,7 @@ import { ref, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Toast from '@/components/Toast.vue'
 import type { Assembly } from '../types'
-import { assembliesService } from '../services/assemblies.service'
+import { assembliesService } from '../services/assemblies.service.tauri'
 
 const router = useRouter()
 const route = useRoute()
