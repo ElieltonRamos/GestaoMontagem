@@ -408,13 +408,14 @@ const loadData = async () => {
     
     allAssemblers.value = assemblers
     allAssemblies.value = assemblies
-    
-    await renderCharts()
   } catch (error) {
     toast.message = 'Erro ao carregar dados do dashboard'
     toast.type = 'error'
   } finally {
     isLoading.value = false
+    // Aguardar o DOM atualizar (canvas aparecer) antes de renderizar
+    await nextTick()
+    await renderCharts()
   }
 }
 

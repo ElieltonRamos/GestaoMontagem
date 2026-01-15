@@ -4,6 +4,9 @@ use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
+use std::fs;
+use std::path::PathBuf;
+use tauri::Manager;
 
 // ============================================================================
 // ESTRUTURAS
@@ -521,4 +524,274 @@ pub fn get_dashboard_stats(state: State<DbConnection>) -> Result<DashboardStats,
         total_value,
         active_assemblers,
     })
+}
+
+// ============================================================================
+// BACKUP
+// ============================================================================
+
+#[tauri::command]
+pub fn create_backup(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let db_path = app_dir.join("database.db");
+    
+    if !db_path.exists() {
+        return Err("Banco de dados não encontrado".to_string());
+    }
+    
+    // Criar pasta de backups
+    let backup_dir = app_dir.join("backups");
+    fs::create_dir_all(&backup_dir).map_err(|e| e.to_string())?;
+    
+    // Nome do arquivo com timestamp
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let backup_filename = format!("backup_{}.db", timestamp);
+    let backup_path = backup_dir.join(&backup_filename);
+    
+    // Copiar arquivo
+    fs::copy(&db_path, &backup_path).map_err(|e| e.to_string())?;
+    
+    Ok(backup_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn list_backups(app_handle: tauri::AppHandle) -> Result<Vec<BackupInfo>, String> {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let backup_dir = app_dir.join("backups");
+    
+    if !backup_dir.exists() {
+        return Ok(vec![]);
+    }
+    
+    let mut backups = Vec::new();
+    
+    for entry in fs::read_dir(backup_dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        
+        if path.extension().and_then(|s| s.to_str()) == Some("db") {
+            let metadata = fs::metadata(&path).map_err(|e| e.to_string())?;
+            let size = metadata.len();
+            let created = metadata
+                .created()
+                .map_err(|e| e.to_string())?;
+            
+            let created_timestamp = created
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_secs();
+            
+            backups.push(BackupInfo {
+                filename: path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("")
+                    .to_string(),
+                path: path.to_string_lossy().to_string(),
+                size,
+                created_at: created_timestamp,
+            });
+        }
+    }
+    
+    // Ordenar por data (mais recente primeiro)
+    backups.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    
+    Ok(backups)
+}
+
+#[tauri::command]
+pub fn restore_backup(
+    app_handle: tauri::AppHandle,
+    backup_path: String,
+) -> Result<String, String> {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let db_path = app_dir.join("database.db");
+    let backup = PathBuf::from(&backup_path);
+    
+    if !backup.exists() {
+        return Err("Backup não encontrado".to_string());
+    }
+    
+    // Fazer backup do banco atual antes de restaurar
+    let safety_backup = app_dir.join("database_before_restore.db");
+    if db_path.exists() {
+        fs::copy(&db_path, &safety_backup).map_err(|e| e.to_string())?;
+    }
+    
+    // Restaurar backup
+    fs::copy(&backup, &db_path).map_err(|e| e.to_string())?;
+    
+    Ok("Backup restaurado com sucesso".to_string())
+}
+
+#[tauri::command]
+pub fn delete_backup(backup_path: String) -> Result<bool, String> {
+    let backup = PathBuf::from(&backup_path);
+    
+    if !backup.exists() {
+        return Err("Backup não encontrado".to_string());
+    }
+    
+    fs::remove_file(&backup).map_err(|e| e.to_string())?;
+    
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn export_backup_to_location(
+    app_handle: tauri::AppHandle,
+    destination: String,
+) -> Result<String, String> {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let db_path = app_dir.join("database.db");
+    let dest_path = PathBuf::from(&destination);
+    
+    if !db_path.exists() {
+        return Err("Banco de dados não encontrado".to_string());
+    }
+    
+    fs::copy(&db_path, &dest_path).map_err(|e| e.to_string())?;
+    
+    Ok(dest_path.to_string_lossy().to_string())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+
+pub struct BackupInfo {
+    pub filename: String,
+    pub path: String,
+    pub size: u64,
+    #[serde(rename = "createdAt")]
+    pub created_at: u64,
+}
+
+#[tauri::command]
+pub fn import_backup_from_location(
+    app_handle: tauri::AppHandle,
+    source: String,
+) -> Result<String, String> {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let source_path = PathBuf::from(&source);
+    
+    if !source_path.exists() {
+        return Err("Arquivo de backup não encontrado".to_string());
+    }
+    
+    // Verificar se é um arquivo .db válido
+    if source_path.extension().and_then(|s| s.to_str()) != Some("db") {
+        return Err("Arquivo inválido. Selecione um arquivo .db".to_string());
+    }
+    
+    // Criar pasta de backups
+    let backup_dir = app_dir.join("backups");
+    fs::create_dir_all(&backup_dir).map_err(|e| e.to_string())?;
+    
+    // Copiar para a pasta de backups com timestamp
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let backup_filename = format!("imported_{}.db", timestamp);
+    let backup_path = backup_dir.join(&backup_filename);
+    
+    fs::copy(&source_path, &backup_path).map_err(|e| e.to_string())?;
+    
+    Ok(format!("Backup importado: {}", backup_filename))
+}
+
+#[tauri::command]
+pub fn create_auto_backup(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let db_path = app_dir.join("database.db");
+    
+    if !db_path.exists() {
+        return Err("Banco de dados não encontrado".to_string());
+    }
+    
+    let backup_dir = app_dir.join("backups");
+    fs::create_dir_all(&backup_dir).map_err(|e| e.to_string())?;
+    
+    // Verificar se já existe backup de hoje
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let mut has_today_backup = false;
+    
+    if let Ok(entries) = fs::read_dir(&backup_dir) {
+        for entry in entries.flatten() {
+            if let Some(filename) = entry.file_name().to_str() {
+                if filename.starts_with("backup_") && filename.contains(&today) {
+                    has_today_backup = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Se já tem backup de hoje, não cria outro
+    if has_today_backup {
+        return Ok("Backup de hoje já existe".to_string());
+    }
+    
+    // Criar novo backup
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let backup_filename = format!("backup_{}.db", timestamp);
+    let backup_path = backup_dir.join(&backup_filename);
+    
+    fs::copy(&db_path, &backup_path).map_err(|e| e.to_string())?;
+    
+    // Limpar backups antigos (manter apenas os 2 mais recentes)
+    cleanup_old_backups(&backup_dir, 2)?;
+    
+    Ok(backup_filename)
+}
+
+fn cleanup_old_backups(backup_dir: &PathBuf, keep_count: usize) -> Result<(), String> {
+    let mut backups: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
+    
+    // Coletar todos os backups com suas datas de criação
+    if let Ok(entries) = fs::read_dir(backup_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            
+            if path.extension().and_then(|s| s.to_str()) == Some("db") {
+                if let Ok(metadata) = fs::metadata(&path) {
+                    if let Ok(created) = metadata.created() {
+                        backups.push((path, created));
+                    }
+                }
+            }
+        }
+    }
+    
+    // Ordenar por data (mais recente primeiro)
+    backups.sort_by(|a, b| b.1.cmp(&a.1));
+    
+    // Deletar os backups excedentes
+    if backups.len() > keep_count {
+        for (path, _) in backups.iter().skip(keep_count) {
+            let _ = fs::remove_file(path);
+        }
+    }
+    
+    Ok(())
 }

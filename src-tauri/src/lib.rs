@@ -72,6 +72,14 @@ pub fn run() {
             db::assembly_exists_by_order_number_except_id,
             //stats
             db::get_dashboard_stats,
+            // backups
+            db::create_backup,
+            db::list_backups,
+            db::restore_backup,
+            db::delete_backup,
+            db::export_backup_to_location,
+            db::import_backup_from_location,
+            db::create_auto_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -43,6 +43,11 @@ const router = createRouter({
           name: 'assembly-details',
           component: () => import('@/views/AssemblyDetails.vue'),
         },
+        {
+          path: 'backups',
+          name: 'backups',
+          component: () => import('@/views/BackupView.vue'),
+        },
       ],
     },
   ],
