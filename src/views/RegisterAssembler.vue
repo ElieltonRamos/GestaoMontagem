@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import Toast from '@/components/Toast.vue'
-import { assemblersService } from '../services'
+import { assemblersService } from '../services/assemblers.service.tauri'
 
 const form = reactive({
   name: '',
@@ -113,15 +113,28 @@ const formatPhone = (event: Event) => {
   const input = event.target as HTMLInputElement
   let value = input.value.replace(/\D/g, '')
   
-  if (value.length <= 11) {
-    value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
-    value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3')
-    value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
+  // Limita a 11 dígitos
+  if (value.length > 11) {
+    value = value.substring(0, 11)
+  }
+  
+  // Formata conforme a quantidade de dígitos
+  if (value.length <= 2) {
     value = value.replace(/^(\d*)/, '($1')
+  } else if (value.length <= 7) {
+    // (38) 9886
+    value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
+  } else if (value.length <= 10) {
+    // (38) 9886-635 (telefone fixo)
+    value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+  } else {
+    // (38) 98866-3580 (celular com 9 dígitos)
+    value = value.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
   }
   
   form.phone = value
 }
+
 
 const formatCPF = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -136,7 +149,7 @@ const formatCPF = (event: Event) => {
   form.cpf = value
 }
 
-const validateForm = (): boolean => {
+const validateForm = async (): Promise<boolean> => {
   let isValid = true
   
   errors.name = ''
@@ -145,9 +158,12 @@ const validateForm = (): boolean => {
   if (!form.name.trim()) {
     errors.name = 'Nome é obrigatório'
     isValid = false
-  } else if (assemblersService.existsByName(form.name)) {
-    errors.name = 'Já existe um montador com este nome'
-    isValid = false
+  } else {
+    const exists = await assemblersService.existsByName(form.name)
+    if (exists) {
+      errors.name = 'Já existe um montador com este nome'
+      isValid = false
+    }
   }
   
   const phoneDigits = form.phone.replace(/\D/g, '')
@@ -163,7 +179,9 @@ const validateForm = (): boolean => {
 }
 
 const handleSubmit = async () => {
-  if (!validateForm()) {
+  const isValid = await validateForm()
+  
+  if (!isValid) {
     return
   }
   
@@ -173,12 +191,18 @@ const handleSubmit = async () => {
     const cleanPhone = form.phone.replace(/\D/g, '')
     const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
     
-    assemblersService.create(
+    const newAssembler = await assemblersService.create(
       form.name.trim(),
       cleanPhone,
       cleanCPF,
       form.address.trim() || undefined
     )
+    
+    if (!newAssembler) {
+      toast.message = 'Erro ao cadastrar montador'
+      toast.type = 'error'
+      return
+    }
     
     toast.message = 'Montador cadastrado com sucesso!'
     toast.type = 'success'

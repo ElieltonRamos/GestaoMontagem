@@ -2,9 +2,17 @@
   <div>
     <h2 class="text-2xl font-bold text-white mb-6">Lista de Montadores</h2>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700">
+      <div class="flex items-center justify-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span class="ml-3 text-gray-400">Carregando montadores...</span>
+      </div>
+    </div>
+
     <!-- Empty State -->
     <div
-      v-if="assemblers.length === 0"
+      v-else-if="assemblers.length === 0"
       class="bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700 text-center"
     >
       <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +79,8 @@
 
                   <button
                     @click="openDeleteConfirm(assembler)"
-                    class="text-red-400 hover:text-red-300 transition-colors"
+                    :disabled="isDeleting"
+                    class="text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Excluir"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,6 +106,7 @@
     <!-- Delete Confirmation -->
     <ConfirmDialog
       :is-open="isDeleteConfirmOpen"
+      :is-loading="isDeleting"
       title="Excluir montador"
       message="Tem certeza que deseja excluir este montador? Esta ação não pode ser desfeita."
       @confirm="handleDelete"
@@ -113,22 +123,32 @@ import { useRouter } from 'vue-router'
 import EditAssemblerModal from '@/components/EditAssemblerModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import Toast from '@/components/Toast.vue'
-import { Assembler } from '../types'
-import { assemblersService } from '../services'
+import type { Assembler } from '../types'
+import { assemblersService } from '../services/assemblers.service.tauri'
 
 const router = useRouter()
 const assemblers = ref<Assembler[]>([])
 const selectedAssembler = ref<Assembler | null>(null)
 const isEditModalOpen = ref(false)
 const isDeleteConfirmOpen = ref(false)
+const isLoading = ref(true)
+const isDeleting = ref(false)
 
 const toast = reactive({
   message: '',
   type: 'success' as 'success' | 'error'
 })
 
-const loadAssemblers = () => {
-  assemblers.value = assemblersService.getAll()
+const loadAssemblers = async () => {
+  isLoading.value = true
+  try {
+    assemblers.value = await assemblersService.getAll()
+  } catch (error) {
+    toast.message = 'Erro ao carregar montadores'
+    toast.type = 'error'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const formatPhone = (phone: string): string => {
@@ -150,8 +170,8 @@ const closeEditModal = () => {
   selectedAssembler.value = null
 }
 
-const handleSaved = () => {
-  loadAssemblers()
+const handleSaved = async () => {
+  await loadAssemblers()
   toast.message = 'O montador foi atualizado com sucesso!'
   toast.type = 'success'
 }
@@ -166,14 +186,32 @@ const closeDeleteConfirm = () => {
   selectedAssembler.value = null
 }
 
-const handleDelete = () => {
-  if (selectedAssembler.value) {
-    assemblersService.delete(selectedAssembler.value.id)
-    loadAssemblers()
-    toast.message = 'Montador deletado!'
-    toast.type = 'success'
+const handleDelete = async () => {
+  if (!selectedAssembler.value) {
+    closeDeleteConfirm()
+    return
   }
-  closeDeleteConfirm()
+
+  isDeleting.value = true
+  
+  try {
+    const success = await assemblersService.delete(selectedAssembler.value.id)
+    
+    if (success) {
+      await loadAssemblers()
+      toast.message = 'Montador deletado com sucesso!'
+      toast.type = 'success'
+    } else {
+      toast.message = 'Erro ao deletar montador'
+      toast.type = 'error'
+    }
+  } catch (error) {
+    toast.message = 'Erro ao deletar montador'
+    toast.type = 'error'
+  } finally {
+    isDeleting.value = false
+    closeDeleteConfirm()
+  }
 }
 
 onMounted(() => {

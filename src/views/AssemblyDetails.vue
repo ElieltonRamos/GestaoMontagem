@@ -12,7 +12,16 @@
       <h2 class="text-2xl font-bold text-white">Detalhes da Montagem</h2>
     </div>
 
-    <div v-if="assembly" class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700">
+      <div class="flex items-center justify-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span class="ml-3 text-gray-400">Carregando detalhes...</span>
+      </div>
+    </div>
+
+    <!-- Assembly Details -->
+    <div v-else-if="assembly" class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-400 mb-1">Número da venda</label>
@@ -58,21 +67,31 @@
       </div>
     </div>
 
+    <!-- Not Found -->
     <div v-else class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
       <p class="text-gray-400">Montagem não encontrada</p>
     </div>
+
+    <Toast :message="toast.message" :type="toast.type" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Assembly } from '../types'
-import { assembliesService } from '../services'
+import Toast from '@/components/Toast.vue'
+import type { Assembly } from '../types'
+import { assembliesService } from '../services/assemblies.service'
 
 const router = useRouter()
 const route = useRoute()
 const assembly = ref<Assembly | null>(null)
+const isLoading = ref(true)
+
+const toast = reactive({
+  message: '',
+  type: 'success' as 'success' | 'error'
+})
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-br', {
@@ -103,8 +122,26 @@ const goBack = () => {
   router.back()
 }
 
+const loadAssembly = async () => {
+  isLoading.value = true
+  
+  try {
+    const id = route.params.id as string
+    assembly.value = await assembliesService.getById(id)
+    
+    if (!assembly.value) {
+      toast.message = 'Montagem não encontrada'
+      toast.type = 'error'
+    }
+  } catch (error) {
+    toast.message = 'Erro ao carregar detalhes da montagem'
+    toast.type = 'error'
+  } finally {
+    isLoading.value = false
+  }
+}
+
 onMounted(() => {
-  const id = route.params.id as string
-  assembly.value = assembliesService.getById(id)
+  loadAssembly()
 })
 </script>

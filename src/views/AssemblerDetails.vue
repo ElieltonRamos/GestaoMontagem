@@ -12,7 +12,15 @@
       <h2 class="text-2xl font-bold text-white">Detalhes do Montador</h2>
     </div>
 
-    <div v-if="assembler" class="space-y-6">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700">
+      <div class="flex items-center justify-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span class="ml-3 text-gray-400">Carregando detalhes...</span>
+      </div>
+    </div>
+
+    <div v-else-if="assembler" class="space-y-6">
       <!-- Assembler info -->
       <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
         <div class="space-y-4">
@@ -173,7 +181,8 @@
 
                     <button
                       @click="openDeleteConfirm(assembly)"
-                      class="text-red-400 hover:text-red-300 transition-colors"
+                      :disabled="isDeleting"
+                      class="text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Excluir"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,6 +207,7 @@
 
       <ConfirmDialog
         :is-open="isDeleteConfirmOpen"
+        :is-loading="isDeleting"
         title="Excluir montagem"
         message="Tem certeza que deseja excluir esta montagem? Esta ação não pode ser desfeita."
         @confirm="handleDeleteAssembly"
@@ -217,8 +227,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Assembler, Assembly } from '../types'
-import { assemblersService } from '../services'
-import { assembliesService } from '../services'
+import { assemblersService } from '../services/assemblers.service.tauri'
+import { assembliesService } from '../services/assemblies.service.tauri'
 import EditAssemblyModal from '../components/EditAssemblyModal.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import Toast from '../components/Toast.vue'
@@ -228,6 +238,8 @@ const route = useRoute()
 
 const assembler = ref<Assembler | null>(null)
 const allAssemblies = ref<Assembly[]>([])
+const isLoading = ref(true)
+const isDeleting = ref(false)
 
 const selectedAssembly = ref<Assembly | null>(null)
 const isEditModalOpen = ref(false)
@@ -265,7 +277,6 @@ const assemblerAssemblies = computed(() => {
 const filteredAssemblerAssemblies = computed(() => {
   let result = assemblerAssemblies.value
 
-  // Date range (inclusive)
   if (filters.startDate) {
     const start = parseYyyyMmDdToLocalDate(filters.startDate)
     result = result.filter(a => parseYyyyMmDdToLocalDate(a.date) >= start)
@@ -277,7 +288,6 @@ const filteredAssemblerAssemblies = computed(() => {
     result = result.filter(a => parseYyyyMmDdToLocalDate(a.date) <= end)
   }
 
-  // Sort by date desc
   return [...result].sort((a, b) => parseYyyyMmDdToLocalDate(b.date).getTime() - parseYyyyMmDdToLocalDate(a.date).getTime())
 })
 
@@ -314,9 +324,11 @@ const formatDateTime = (dateString: string): string => {
   })
 }
 
-// TODO: after you confirm BRL/USD, adjust this formatter
 const formatMoney = (value: number): string => {
-  return value.toFixed(2)
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value)
 }
 
 const goBack = () => router.back()
@@ -335,8 +347,8 @@ const closeEditModal = () => {
   selectedAssembly.value = null
 }
 
-const handleAssemblySaved = () => {
-  allAssemblies.value = assembliesService.getAll()
+const handleAssemblySaved = async () => {
+  await loadAssemblies()
   toast.message = 'Montagem atualizada com sucesso!'
   toast.type = 'success'
 }
@@ -351,24 +363,71 @@ const closeDeleteConfirm = () => {
   selectedAssembly.value = null
 }
 
-const handleDeleteAssembly = () => {
-  if (!selectedAssembly.value) return
+const handleDeleteAssembly = async () => {
+  if (!selectedAssembly.value) {
+    closeDeleteConfirm()
+    return
+  }
 
-  assembliesService.delete(selectedAssembly.value.id)
-  allAssemblies.value = assembliesService.getAll()
+  isDeleting.value = true
 
-  toast.message = 'Montagem excluída com sucesso!'
-  toast.type = 'success'
+  try {
+    const success = await assembliesService.delete(selectedAssembly.value.id)
 
-  closeDeleteConfirm()
+    if (success) {
+      await loadAssemblies()
+      toast.message = 'Montagem excluída com sucesso!'
+      toast.type = 'success'
+    } else {
+      toast.message = 'Erro ao excluir montagem'
+      toast.type = 'error'
+    }
+  } catch (error) {
+    toast.message = 'Erro ao excluir montagem'
+    toast.type = 'error'
+  } finally {
+    isDeleting.value = false
+    closeDeleteConfirm()
+  }
+}
+
+const loadAssemblies = async () => {
+  try {
+    allAssemblies.value = await assembliesService.getAll()
+  } catch (error) {
+    toast.message = 'Erro ao carregar montagens'
+    toast.type = 'error'
+  }
+}
+
+const loadData = async () => {
+  isLoading.value = true
+
+  try {
+    const id = route.params.id as string
+    
+    const [assemblerData, assembliesData] = await Promise.all([
+      assemblersService.getById(id),
+      assembliesService.getAll()
+    ])
+
+    assembler.value = assemblerData
+    allAssemblies.value = assembliesData
+
+    if (!assembler.value) {
+      toast.message = 'Montador não encontrado'
+      toast.type = 'error'
+    }
+  } catch (error) {
+    toast.message = 'Erro ao carregar dados'
+    toast.type = 'error'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 onMounted(() => {
   resetToCurrentMonth()
-
-  const id = route.params.id as string
-  assembler.value = assemblersService.getById(id)
-
-  allAssemblies.value = assembliesService.getAll()
+  loadData()
 })
 </script>

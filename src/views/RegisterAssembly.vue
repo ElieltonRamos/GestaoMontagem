@@ -2,7 +2,15 @@
   <div>
     <h2 class="text-2xl font-bold text-white mb-6">Cadastrar Montagem</h2>
     
-    <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
+      <div class="flex items-center justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span class="ml-3 text-gray-400">Carregando...</span>
+      </div>
+    </div>
+
+    <div v-else class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 max-w-2xl">
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <!-- Order Number -->
         <div>
@@ -83,14 +91,13 @@
             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">R$</span>
             <input
               id="orderValue"
-              v-model.number="form.orderValue"
+              v-model="form.orderValue"
               type="number"
               step="0.01"
               min="0"
               class="w-full pl-12 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               :class="{ 'border-red-500': errors.orderValue }"
               placeholder="0,00"
-              @input="calculateAmountPaid"
             />
           </div>
           <p v-if="errors.orderValue" class="mt-1 text-sm text-red-400">{{ errors.orderValue }}</p>
@@ -104,7 +111,7 @@
           <div class="relative">
             <input
               id="percentagePaid"
-              v-model.number="form.percentagePaid"
+              v-model="form.percentagePaid"
               type="number"
               step="0.01"
               min="0"
@@ -112,7 +119,6 @@
               class="w-full pr-8 pl-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               :class="{ 'border-red-500': errors.percentagePaid }"
               placeholder="0,00"
-              @input="calculateAmountPaid"
             />
             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">%</span>
           </div>
@@ -157,16 +163,19 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted } from 'vue'
 import Toast from '@/components/Toast.vue'
-import { Assembler, Assembly } from '../types'
-import { assemblersService, assembliesService } from '../services'
+import type { Assembler } from '../types'
+import { assembliesService } from '../services/assemblies.service.tauri'
+import { assemblersService } from '../services/assemblers.service.tauri'
 
 const assemblers = ref<Assembler[]>([])
+const isLoading = ref(true)
+const isSubmitting = ref(false)
 
 const form = reactive({
   orderNumber: '',
   assemblerId: '',
-  orderValue: 0,
-  percentagePaid: 0,
+  orderValue: '',
+  percentagePaid: '',
   furnitureDescription: '',
   date: new Date().toISOString().split('T')[0]
 })
@@ -185,19 +194,17 @@ const toast = reactive({
   type: 'success' as 'success' | 'error'
 })
 
-const isSubmitting = ref(false)
-
 const amountPaid = computed(() => {
-  return (form.orderValue * form.percentagePaid) / 100
+  const orderValue = parseFloat(form.orderValue) || 0
+  const percentagePaid = parseFloat(form.percentagePaid) || 0
+  return (orderValue * percentagePaid) / 100
 })
-
-const calculateAmountPaid = () => {}
 
 const formatCurrency = (value: number): string => {
   return value.toFixed(2)
 }
 
-const validateForm = (): boolean => {
+const validateForm = async (): Promise<boolean> => {
   let isValid = true
   
   errors.orderNumber = ''
@@ -210,9 +217,12 @@ const validateForm = (): boolean => {
   if (!form.orderNumber.trim()) {
     errors.orderNumber = 'Número da venda é obrigatório'
     isValid = false
-  } else if (assembliesService.existsByOrderNumber(form.orderNumber)) {
-    errors.orderNumber = 'Já existe uma montagem com este número de venda'
-    isValid = false
+  } else {
+    const exists = await assembliesService.existsByOrderNumber(form.orderNumber)
+    if (exists) {
+      errors.orderNumber = 'Já existe uma montagem com este número de venda'
+      isValid = false
+    }
   }
   
   if (!form.date) {
@@ -230,12 +240,14 @@ const validateForm = (): boolean => {
     isValid = false
   }
   
-  if (form.orderValue <= 0) {
+  const orderValue = parseFloat(form.orderValue)
+  if (!form.orderValue || isNaN(orderValue) || orderValue <= 0) {
     errors.orderValue = 'O valor da venda deve ser maior que 0'
     isValid = false
   }
   
-  if (form.percentagePaid < 0 || form.percentagePaid > 100) {
+  const percentagePaid = parseFloat(form.percentagePaid)
+  if (form.percentagePaid === '' || isNaN(percentagePaid) || percentagePaid < 0 || percentagePaid > 100) {
     errors.percentagePaid = 'O percentual deve estar entre 0 e 100'
     isValid = false
   }
@@ -244,7 +256,9 @@ const validateForm = (): boolean => {
 }
 
 const handleSubmit = async () => {
-  if (!validateForm()) {
+  const isValid = await validateForm()
+  
+  if (!isValid) {
     return
   }
   
@@ -259,28 +273,30 @@ const handleSubmit = async () => {
       return
     }
 
-    const newAssembly: Assembly = {
-      id: '1',
-      amountPaid: amountPaid.value,
+    const newAssembly = await assembliesService.create({
       assemblerId: form.assemblerId,
       assemblerName: selectedAssembler.name,
-      createdAt: form.date,
-      date: form.date,
-      furnitureDescription: form.furnitureDescription.trim(),
       orderNumber: form.orderNumber.trim(),
-      orderValue: form.orderValue,
-      percentagePaid: form.percentagePaid,
+      orderValue: parseFloat(form.orderValue),
+      percentagePaid: parseFloat(form.percentagePaid),
+      amountPaid: amountPaid.value,
+      furnitureDescription: form.furnitureDescription.trim(),
+      date: form.date
+    })
+    
+    if (!newAssembly) {
+      toast.message = 'Erro ao cadastrar montagem'
+      toast.type = 'error'
+      return
     }
-
-    assembliesService.create(newAssembly)
     
     toast.message = 'Montagem cadastrada com sucesso!'
     toast.type = 'success'
     
     form.orderNumber = ''
     form.assemblerId = ''
-    form.orderValue = 0
-    form.percentagePaid = 0
+    form.orderValue = ''
+    form.percentagePaid = ''
     form.furnitureDescription = ''
     form.date = new Date().toISOString().split('T')[0]
     
@@ -292,8 +308,16 @@ const handleSubmit = async () => {
   }
 }
 
-const loadAssemblers = () => {
-  assemblers.value = assemblersService.getAll()
+const loadAssemblers = async () => {
+  isLoading.value = true
+  try {
+    assemblers.value = await assemblersService.getAll()
+  } catch (error) {
+    toast.message = 'Erro ao carregar montadores'
+    toast.type = 'error'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 onMounted(() => {
