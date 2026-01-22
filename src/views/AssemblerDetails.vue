@@ -34,9 +34,9 @@
             <p class="text-lg text-white">{{ formatPhone(assembler.phone) }}</p>
           </div>
 
-          <div v-if="assembler.cpf">
-            <label class="block text-sm font-medium text-gray-400 mb-1">CPF</label>
-            <p class="text-lg text-white">{{ formatCPF(assembler.cpf) }}</p>
+          <div v-if="assembler.document">
+            <label class="block text-sm font-medium text-gray-400 mb-1">Documento</label>
+            <p class="text-lg text-white">{{ formatDocument(assembler.document) }}</p>
           </div>
 
           <div v-if="assembler.address">
@@ -309,9 +309,16 @@ const formatPhone = (phone: string): string => {
   return digits.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
 }
 
-const formatCPF = (cpf: string): string => {
-  const digits = cpf.replace(/\D/g, '')
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+const formatDocument = (doc: string): string => {
+  const digits = doc.replace(/\D/g, '')
+  if (digits.length === 11) {
+    // CPF: 000.000.000-00
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  } else if (digits.length === 14) {
+    // CNPJ: 00.000.000/0000-00
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+  }
+  return doc
 }
 
 const formatDateTime = (dateString: string): string => {

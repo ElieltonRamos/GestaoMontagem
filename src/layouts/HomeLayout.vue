@@ -93,7 +93,7 @@
       </nav>
 
       <div class="p-4 border-t border-slate-800">
-        <p class="text-xs text-slate-400 text-center">v0.2.0 | © 2026</p>
+        <p class="text-xs text-slate-400 text-center">v0.3.0 | © 2026</p>
       </div>
     </aside>
 

@@ -2,7 +2,7 @@ export interface Assembler {
   id: string;
   name: string;
   phone: string;
-  cpf?: string;
+  document?: string;
   address?: string;
   createdAt: string;
 }

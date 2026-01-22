@@ -90,22 +90,19 @@
               </p>
             </div>
 
-            <!-- CPF Field -->
-            <div>
-              <label for="edit-cpf" class="block text-sm font-medium text-gray-300 mb-2">
-                CPF <span class="text-gray-500 text-xs">(Opcional)</span>
-              </label>
-              <input
-                id="edit-cpf"
-                v-model="form.cpf"
-                type="text"
-                @input="formatCPF"
-                maxlength="14"
-                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :disabled="isSubmitting"
-                placeholder="000.000.000-00"
-              />
-            </div>
+            <label for="edit-document" class="block text-sm font-medium text-gray-300 mb-2">
+              Documento (CPF/CNPJ) <span class="text-gray-500 text-xs">(Opcional)</span>
+            </label>
+            <input
+              id="edit-document"
+              v-model="form.document"
+              type="text"
+              @input="formatDocument"
+              maxlength="18"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="isSubmitting"
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
+            />
 
             <!-- Address Field -->
             <div>
@@ -166,7 +163,7 @@ const emit = defineEmits<{
 const form = reactive({
   name: '',
   phone: '',
-  cpf: '',
+  document: '',
   address: ''
 })
 
@@ -184,12 +181,12 @@ watch(
     if (newAssembler) {
       form.name = newAssembler.name
       form.phone = formatPhoneDisplay(newAssembler.phone)
-      form.cpf = newAssembler.cpf ? formatCPFDisplay(newAssembler.cpf) : ''
+      form.document = newAssembler.document ? formatDocumentDisplay(newAssembler.document) : ''
       form.address = newAssembler.address || ''
     } else {
       form.name = ''
       form.phone = ''
-      form.cpf = ''
+      form.document = ''
       form.address = ''
     }
     errors.name = ''
@@ -202,9 +199,14 @@ const formatPhoneDisplay = (phone: string): string => {
   return digits.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
 }
 
-const formatCPFDisplay = (cpf: string): string => {
-  const digits = cpf.replace(/\D/g, '')
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+const formatDocumentDisplay = (doc: string): string => {
+  const digits = doc.replace(/\D/g, '')
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  } else if (digits.length === 14) {
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+  }
+  return doc
 }
 
 const formatPhone = (event: Event) => {
@@ -221,17 +223,24 @@ const formatPhone = (event: Event) => {
   form.phone = value
 }
 
-const formatCPF = (event: Event) => {
+const formatDocument = (event: Event) => {
   const input = event.target as HTMLInputElement
   let value = input.value.replace(/\D/g, '')
-
+  
   if (value.length <= 11) {
+    // CPF
     value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
     value = value.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3')
     value = value.replace(/(\d{3})(\d{3})/, '$1.$2')
+  } else {
+    // CNPJ
+    value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})/, '$1.$2.$3/$4')
+    value = value.replace(/(\d{2})(\d{3})(\d{3})/, '$1.$2.$3')
+    value = value.replace(/(\d{2})(\d{3})/, '$1.$2')
   }
-
-  form.cpf = value
+  
+  form.document = value
 }
 
 const validateForm = async (): Promise<boolean> => {
@@ -287,13 +296,13 @@ const handleSubmit = async () => {
 
   try {
     const cleanPhone = form.phone.replace(/\D/g, '')
-    const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
+    const cleanDocument = form.document ? form.document.replace(/\D/g, '') : undefined
 
     await assemblersService.update(
       props.assembler.id,
       form.name.trim(),
       cleanPhone,
-      cleanCPF,
+      cleanDocument,
       form.address.trim() || undefined
     )
 
@@ -301,7 +310,6 @@ const handleSubmit = async () => {
     closeModal()
   } catch (error) {
     console.error('Erro ao salvar montador:', error)
-    // Aqui você pode adicionar um toast global, ou setar um erro genérico
     if (!errors.name && !errors.phone) {
       errors.name = 'Erro ao salvar montador'
     }

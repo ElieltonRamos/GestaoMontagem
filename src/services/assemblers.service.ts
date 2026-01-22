@@ -18,13 +18,13 @@ export class AssemblersService {
     return this.getAll().some(a => a.id !== excludeId && a.name.trim().toLowerCase() === normalized)
   }
 
-  create(name: string, phone: string, cpf?: string, address?: string): Assembler {
+  create(name: string, phone: string, document?: string, address?: string): Assembler {
     const assemblers = this.getAll()
     const newAssembler: Assembler = {
       id: crypto.randomUUID(),
       name,
       phone,
-      cpf,
+      document,
       address,
       createdAt: new Date().toISOString(),
     }
@@ -38,12 +38,12 @@ export class AssemblersService {
     return this.getAll().find(a => a.id === id) || null
   }
 
-  update(id: string, name: string, phone: string, cpf?: string, address?: string): void {
+  update(id: string, name: string, phone: string, document?: string, address?: string): void {
     const assemblers = this.getAll()
     const index = assemblers.findIndex(a => a.id === id)
     if (index === -1) return
 
-    assemblers[index] = { ...assemblers[index], name, phone, cpf, address }
+    assemblers[index] = { ...assemblers[index], name, phone, document, address }
     storageClient.setItem(ASSEMBLERS_KEY, assemblers)
   }
 

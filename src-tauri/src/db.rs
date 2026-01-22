@@ -17,7 +17,7 @@ pub struct Assembler {
     pub id: String,
     pub name: String,
     pub phone: String,
-    pub cpf: Option<String>,
+    pub document: Option<String>,
     pub address: Option<String>,
     #[serde(rename = "createdAt")]
     pub created_at: String,
@@ -59,7 +59,7 @@ pub fn init_db(conn: &Connection) -> Result<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             phone TEXT NOT NULL,
-            cpf TEXT,
+            document TEXT,
             address TEXT,
             created_at TEXT NOT NULL
         )",
@@ -102,7 +102,7 @@ pub fn create_assembler(
     state: State<DbConnection>,
     name: String,
     phone: String,
-    cpf: Option<String>,
+    document: Option<String>,
     address: Option<String>,
 ) -> Result<Assembler, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
@@ -110,8 +110,8 @@ pub fn create_assembler(
     let created_at = chrono::Utc::now().to_rfc3339();
     
     conn.execute(
-        "INSERT INTO assemblers (name, phone, cpf, address, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![&name, &phone, &cpf, &address, &created_at],
+        "INSERT INTO assemblers (name, phone, document, address, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![&name, &phone, &document, &address, &created_at],
     )
     .map_err(|e| e.to_string())?;
     
@@ -121,7 +121,7 @@ pub fn create_assembler(
         id: id.to_string(),
         name,
         phone,
-        cpf,
+        document,
         address,
         created_at,
     })
@@ -132,7 +132,7 @@ pub fn get_all_assemblers(state: State<DbConnection>) -> Result<Vec<Assembler>, 
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     
     let mut stmt = conn
-        .prepare("SELECT id, name, phone, cpf, address, created_at FROM assemblers ORDER BY name")
+        .prepare("SELECT id, name, phone, document, address, created_at FROM assemblers ORDER BY name")
         .map_err(|e| e.to_string())?;
     
     let assemblers = stmt
@@ -141,7 +141,7 @@ pub fn get_all_assemblers(state: State<DbConnection>) -> Result<Vec<Assembler>, 
                 id: row.get::<_, i64>(0)?.to_string(),
                 name: row.get(1)?,
                 phone: row.get(2)?,
-                cpf: row.get(3)?,
+                document: row.get(3)?,
                 address: row.get(4)?,
                 created_at: row.get(5)?,
             })
@@ -159,7 +159,7 @@ pub fn get_assembler_by_id(state: State<DbConnection>, id: String) -> Result<Ass
     let id_int: i64 = id.parse().map_err(|_| "ID inválido".to_string())?;
     
     let mut stmt = conn
-        .prepare("SELECT id, name, phone, cpf, address, created_at FROM assemblers WHERE id = ?1")
+        .prepare("SELECT id, name, phone, document, address, created_at FROM assemblers WHERE id = ?1")
         .map_err(|e| e.to_string())?;
     
     let assembler = stmt
@@ -168,7 +168,7 @@ pub fn get_assembler_by_id(state: State<DbConnection>, id: String) -> Result<Ass
                 id: row.get::<_, i64>(0)?.to_string(),
                 name: row.get(1)?,
                 phone: row.get(2)?,
-                cpf: row.get(3)?,
+                document: row.get(3)?,
                 address: row.get(4)?,
                 created_at: row.get(5)?,
             })
@@ -184,7 +184,7 @@ pub fn update_assembler(
     id: String,
     name: String,
     phone: String,
-    cpf: Option<String>,
+    document: Option<String>,
     address: Option<String>,
 ) -> Result<Assembler, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
@@ -198,8 +198,8 @@ pub fn update_assembler(
         .map_err(|e| e.to_string())?;
     
     conn.execute(
-        "UPDATE assemblers SET name = ?1, phone = ?2, cpf = ?3, address = ?4 WHERE id = ?5",
-        rusqlite::params![&name, &phone, &cpf, &address, id_int],
+        "UPDATE assemblers SET name = ?1, phone = ?2, document = ?3, address = ?4 WHERE id = ?5",
+        rusqlite::params![&name, &phone, &document, &address, id_int],
     )
     .map_err(|e| e.to_string())?;
     
@@ -207,7 +207,7 @@ pub fn update_assembler(
         id,
         name,
         phone,
-        cpf,
+        document,
         address,
         created_at,
     })
@@ -284,7 +284,22 @@ pub fn get_all_assemblies(state: State<DbConnection>) -> Result<Vec<Assembly>, S
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     
     let mut stmt = conn
-        .prepare("SELECT id, assembler_id, assembler_name, order_number, order_value, percentage_paid, amount_paid, furniture_description, date, created_at FROM assemblies ORDER BY date DESC")
+        .prepare("
+            SELECT 
+                a.id, 
+                a.assembler_id, 
+                assembler.name as assembler_name, 
+                a.order_number, 
+                a.order_value, 
+                a.percentage_paid, 
+                a.amount_paid, 
+                a.furniture_description, 
+                a.date, 
+                a.created_at 
+            FROM assemblies a
+            JOIN assemblers assembler ON a.assembler_id = assembler.id
+            ORDER BY a.date DESC
+        ")
         .map_err(|e| e.to_string())?;
     
     let assemblies = stmt
@@ -292,7 +307,7 @@ pub fn get_all_assemblies(state: State<DbConnection>) -> Result<Vec<Assembly>, S
             Ok(Assembly {
                 id: row.get::<_, i64>(0)?.to_string(),
                 assembler_id: row.get::<_, i64>(1)?.to_string(),
-                assembler_name: row.get(2)?,
+                assembler_name: row.get(2)?,  // Agora vem do JOIN
                 order_number: row.get(3)?,
                 order_value: row.get(4)?,
                 percentage_paid: row.get(5)?,
@@ -309,13 +324,21 @@ pub fn get_all_assemblies(state: State<DbConnection>) -> Result<Vec<Assembly>, S
     Ok(assemblies)
 }
 
+
 #[tauri::command]
 pub fn get_assembly_by_id(state: State<DbConnection>, id: String) -> Result<Assembly, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id_int: i64 = id.parse().map_err(|_| "ID inválido".to_string())?;
     
     let mut stmt = conn
-        .prepare("SELECT id, assembler_id, assembler_name, order_number, order_value, percentage_paid, amount_paid, furniture_description, date, created_at FROM assemblies WHERE id = ?1")
+        .prepare("
+            SELECT a.id, a.assembler_id, assembler.name AS assembler_name, 
+                   a.order_number, a.order_value, a.percentage_paid, a.amount_paid, 
+                   a.furniture_description, a.date, a.created_at 
+            FROM assemblies a 
+            JOIN assemblers assembler ON a.assembler_id = assembler.id 
+            WHERE a.id = ?1
+        ")
         .map_err(|e| e.to_string())?;
     
     let assembly = stmt
@@ -337,6 +360,7 @@ pub fn get_assembly_by_id(state: State<DbConnection>, id: String) -> Result<Asse
     
     Ok(assembly)
 }
+
 
 #[tauri::command]
 pub fn update_assembly(

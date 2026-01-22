@@ -38,21 +38,21 @@
           <p v-if="errors.phone" class="mt-1 text-sm text-red-400">{{ errors.phone }}</p>
         </div>
 
-        <!-- CPF Field (Optional) -->
-        <div>
-          <label for="cpf" class="block text-sm font-medium text-gray-300 mb-2">
-            CPF <span class="text-gray-500 text-xs">(Opcional)</span>
-          </label>
-          <input
-            id="cpf"
-            v-model="form.cpf"
-            type="text"
-            @input="formatCPF"
-            maxlength="14"
-            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="000.000.000-00"
-          />
-        </div>
+        <!-- Documento Field (CPF ou CNPJ, Opcional) -->
+          <div>
+            <label for="document" class="block text-sm font-medium text-gray-300 mb-2">
+              Documento (CPF/CNPJ) <span class="text-gray-500 text-xs">(Opcional)</span>
+            </label>
+            <input
+              id="document"
+              v-model="form.document"
+              type="text"
+              @input="formatDocument"
+              maxlength="18"
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
+            />
+          </div>
 
         <!-- Address Field (Optional) -->
         <div>
@@ -93,7 +93,7 @@ import { assemblersService } from '../services/assemblers.service.tauri'
 const form = reactive({
   name: '',
   phone: '',
-  cpf: '',
+  document: '',
   address: ''
 })
 
@@ -136,18 +136,26 @@ const formatPhone = (event: Event) => {
 }
 
 
-const formatCPF = (event: Event) => {
+const formatDocument = (event: Event) => {
   const input = event.target as HTMLInputElement
-  let value = input.value.replace(/\D/g, '')
+  let value = input.value.replace(/\D/g, '')  // Só números
   
   if (value.length <= 11) {
+    // Máscara CPF: 000.000.000-00
     value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
     value = value.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3')
     value = value.replace(/(\d{3})(\d{3})/, '$1.$2')
+  } else {
+    // Máscara CNPJ: 00.000.000/0000-00
+    value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})/, '$1.$2.$3/$4')
+    value = value.replace(/(\d{2})(\d{3})(\d{3})/, '$1.$2.$3')
+    value = value.replace(/(\d{2})(\d{3})/, '$1.$2')
   }
   
-  form.cpf = value
+  form.document = value
 }
+
 
 const validateForm = async (): Promise<boolean> => {
   let isValid = true
@@ -189,12 +197,12 @@ const handleSubmit = async () => {
   
   try {
     const cleanPhone = form.phone.replace(/\D/g, '')
-    const cleanCPF = form.cpf ? form.cpf.replace(/\D/g, '') : undefined
+    const cleanDocument = form.document ? form.document.replace(/\D/g, '') : undefined
     
     const newAssembler = await assemblersService.create(
       form.name.trim(),
       cleanPhone,
-      cleanCPF,
+      cleanDocument,
       form.address.trim() || undefined
     )
     
@@ -209,7 +217,7 @@ const handleSubmit = async () => {
     
     form.name = ''
     form.phone = ''
-    form.cpf = ''
+    form.document = ''
     form.address = ''
     
   } catch (error) {
