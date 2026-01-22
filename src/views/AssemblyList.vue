@@ -326,12 +326,14 @@ const formatCurrency = (value: number): string => {
 }
 
 const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('pt-br', {
+  const date = new Date(dateString + 'T00:00:00')
+  return date.toLocaleDateString('pt-br', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
   })
 }
+
 
 const clearFilters = () => {
   filters.orderNumber = ''

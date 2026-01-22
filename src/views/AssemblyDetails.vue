@@ -101,7 +101,9 @@ const formatCurrency = (value: number): string => {
 }
 
 const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('pt-br', {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString('pt-br', {
     day: '2-digit',
     month: 'long',
     year: 'numeric'
